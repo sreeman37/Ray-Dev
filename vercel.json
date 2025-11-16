@@ -1,0 +1,6 @@
+{
+  "version": 2,
+  "env": {
+    "PUBLIC_KEY": "@public_key"
+  }
+}
