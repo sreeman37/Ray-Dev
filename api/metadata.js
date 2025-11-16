@@ -1,14 +1,9 @@
-module.exports = async (req, res) => {
-    const userId = req.query.user_id;
+module.exports = (req, res) => {
+    const user = req.query.user_id;
 
-    // Fake DB (in-memory)
-    const verifiedUsers = globalThis.verifiedUsers || {};
+    const verified = globalThis.users?.[user]?.verified ?? 0;
 
-    const isVerified = verifiedUsers[userId] === true;
-
-    return res.json({
-        metadata: {
-            verified: isVerified ? 1 : 0
-        }
+    res.json({
+        metadata: { verified }
     });
 };

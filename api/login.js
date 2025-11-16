@@ -1,24 +1,15 @@
-module.exports = async (req, res) => {
-    res.setHeader("Content-Type", "text/html");
+module.exports = (req, res) => {
+    const user = req.query.user_id;
 
-    return res.send(`
-        <html>
-        <head>
-            <title>Account Verification</title>
-        </head>
-        <body style="font-family: Arial; background: #0f0f0f; color: white; padding: 20px;">
-            <h2>Verify Your Account</h2>
-            <form method="POST" action="/api/verify-user">
-                <label>Username:</label><br>
-                <input name="username" required /><br><br>
-                <label>Password:</label><br>
-                <input type="password" name="password" required /><br><br>
-
-                <input type="hidden" name="user_id" value="${req.query.user_id || ''}" />
-
-                <button type="submit">Verify</button>
-            </form>
-        </body>
-        </html>
+    res.send(`
+    <html><body style="font-family:Arial;background:#111;color:#fff;">
+        <h2>Login to Verify</h2>
+        <form method="POST" action="/api/verify">
+            <input type="hidden" name="user_id" value="${user}">
+            Username:<br><input name="username"><br><br>
+            Password:<br><input type="password" name="password"><br><br>
+            <button type="submit">Verify</button>
+        </form>
+    </body></html>
     `);
 };
