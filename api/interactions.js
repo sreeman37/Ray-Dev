@@ -1,112 +1,126 @@
 import nacl from "tweetnacl";
-import * as dns from "dns/promises";
+import dns from "dns/promises";
+import os from "os";
+import process from "process";
+import expressPkg from "express/package.json" assert { type: "json" };
 
-export const config = {
-  runtime: "nodejs18.x",
-};
+export async function handleInteraction(req, res) {
+    const valid = await verifyRequest(req);
+    if (!valid) return res.status(401).send("Invalid request signature");
 
-export default async function handler(req) {
-  // Signature verification
-  const signature = req.headers.get("x-signature-ed25519");
-  const timestamp = req.headers.get("x-signature-timestamp");
-  const publicKey = process.env.PUBLIC_KEY;
+    const body = JSON.parse(req.body);
 
-  const body = await req.text();
+    if (body.type === 1) {
+        return res.json({ type: 1 });
+    }
 
-  const isValid = nacl.sign.detached.verify(
-    Buffer.from(timestamp + body),
-    Buffer.from(signature, "hex"),
-    Buffer.from(publicKey, "hex")
-  );
+    if (body.type === 2) {
+        const cmd = body.data.name;
 
-  if (!isValid) {
-    return new Response("Invalid request signature", { status: 401 });
-  }
+        if (cmd === "ping") {
+            const latency = Math.floor(Math.random() * 20) + 5;
+            const api = Math.floor(Math.random() * 40) + 40;
 
-  const interaction = JSON.parse(body);
+            return res.json({
+                type: 4,
+                data: {
+                    content: `Latency: ${latency}ms\nAPI Latency: ${api}ms`
+                }
+            });
+        }
 
-  // PING request
-  if (interaction.type === 1) {
-    return new Response(JSON.stringify({ type: 1 }), {
-      headers: { "Content-Type": "application/json" },
+        if (cmd === "stats") {
+            const stats = getStats();
+            return res.json({
+                type: 4,
+                data: {
+                    content: "```" + stats + "```"
+                }
+            });
+        }
+
+        if (cmd === "dns") {
+            const domain = body.data.options[0].value;
+            const result = await runDnsLookup(domain);
+
+            return res.json({
+                type: 4,
+                data: {
+                    content: "```\n" + result + "\n```"
+                }
+            });
+        }
+    }
+
+    return res.json({
+        type: 4,
+        data: {
+            content: "Unknown command."
+        }
     });
-  }
-
-  // Commands
-  if (interaction.type === 2) {
-    const name = interaction.data.name;
-
-    // PING command
-    if (name === "ping") {
-      const latency = Math.floor(Math.random() * 20) + 5;
-      const apiLatency = Math.floor(Math.random() * 40) + 40;
-
-      return json({
-        type: 4,
-        data: {
-          content: `Latency: \`${latency}ms\`\nAPI Latency: \`${apiLatency}ms\``,
-        },
-      });
-    }
-
-    // DNS command
-    if (name === "dns") {
-      const domain = interaction.data.options[0].value;
-
-      let results = [];
-
-      const a = await dns.resolve(domain, "A").catch(() => null);
-      if (a) results.push(`A: ${a.join(", ")}`);
-
-      const aaaa = await dns.resolve(domain, "AAAA").catch(() => null);
-      if (aaaa) results.push(`AAAA: ${aaaa.join(", ")}`);
-
-      const cname = await dns.resolve(domain, "CNAME").catch(() => null);
-      if (cname) results.push(`CNAME: ${cname.join(", ")}`);
-
-      const mx = await dns.resolve(domain, "MX").catch(() => null);
-      if (mx)
-        results.push(
-          "MX:\n" + mx.map((m) => `• ${m.exchange} (Priority ${m.priority})`).join("\n")
-        );
-
-      const ns = await dns.resolve(domain, "NS").catch(() => null);
-      if (ns) results.push(`NS:\n${ns.map((n) => `• ${n}`).join("\n")}`);
-
-      const txt = await dns.resolve(domain, "TXT").catch(() => null);
-      if (txt)
-        results.push(
-          "TXT:\n" + txt.map((t) => `• ${t.join("")}`).join("\n")
-        );
-
-      if (results.length === 0) {
-        results.push("No DNS records found.");
-      }
-
-      return json({
-        type: 4,
-        data: {
-          embeds: [
-            {
-              title: `DNS: ${domain.toUpperCase()}`,
-              description: `\`\`\`\n${results.join("\n\n")}\n\`\`\``,
-              color: 0x2b2d31,
-              footer: { text: "DNS Lookup Result" },
-            },
-          ],
-        },
-      });
-    }
-  }
-
-  return json({
-    type: 4,
-    data: { content: "Unknown command." },
-  });
 }
 
-function json(obj) {
-  return new Response(JSON.stringify(obj), {
-    headers: { "Content-Type": "application/json" },
-  });
+async function verifyRequest(req) {
+    const sig = req.get("x-signature-ed25519");
+    const timestamp = req.get("x-signature-timestamp");
+    const body = req.body;
+
+    return nacl.sign.detached.verify(
+        Buffer.from(timestamp + body),
+        Buffer.from(sig, "hex"),
+        Buffer.from(process.env.PUBLIC_KEY, "hex")
+    );
+}
+
+function getStats() {
+    const cpu = os.cpus()[0].model;
+    const cores = os.cpus().length;
+    const total = os.totalmem() / 1024 / 1024 / 1024;
+    const used = (os.totalmem() - os.freemem()) / 1024 / 1024 / 1024;
+
+    return (
+`aero-1 @ web
+
+Aero: ${used.toFixed(2)}/${total.toFixed(0)}GB
+Node: ${process.version}
+Express: v${expressPkg.version}
+CPU: ${cpu} (${cores} cores)
+RAM: ${total.toFixed(0)}GB (${((used / total) * 100).toFixed(2)}%)
+Uptime: ${formatTime(process.uptime() * 1000)}
+`
+    );
+}
+
+function formatTime(ms) {
+    let s = Math.floor(ms / 1000);
+    let d = Math.floor(s / 86400);
+    s %= 86400;
+    let h = Math.floor(s / 3600);
+    s %= 3600;
+    let m = Math.floor(s / 60);
+    return `${d}d ${h}h ${m}m`;
+}
+
+async function runDnsLookup(domain) {
+    let out = [];
+
+    const A = await dns.resolve(domain, "A").catch(() => null);
+    if (A) out.push(`A: ${A.join(", ")}`);
+
+    const AAAA = await dns.resolve(domain, "AAAA").catch(() => null);
+    if (AAAA) out.push(`AAAA: ${AAAA.join(", ")}`);
+
+    const CNAME = await dns.resolve(domain, "CNAME").catch(() => null);
+    if (CNAME) out.push(`CNAME: ${CNAME.join(", ")}`);
+
+    const mx = await dns.resolve(domain, "MX").catch(() => null);
+    if (mx) out.push("MX:\n" + mx.map(m => `• ${m.exchange} (${m.priority})`).join("\n"));
+
+    const ns = await dns.resolve(domain, "NS").catch(() => null);
+    if (ns) out.push("NS:\n" + ns.map(m => `• ${m}`).join("\n"));
+
+    const txt = await dns.resolve(domain, "TXT").catch(() => null);
+    if (txt) out.push("TXT:\n" + txt.map(t => `• ${t.join("")}`).join("\n"));
+
+    return out.length ? out.join("\n\n") : "No DNS records found.";
 }
