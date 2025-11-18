@@ -51,11 +51,10 @@ API Latency: \`${apiLatency}ms\``
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content:
-`aero-1 @ web
+`siwi-1 @ web
 
-Aero: ${stats.aero}
-Node: ${stats.node} ( express once )
-Discord.js: ${stats.discordJS}
+Siwi: ${stats.aero}
+Node: ${stats.node}
 CPU: ${stats.cpuModel} (${stats.cores})
 RAM: ${stats.ram}
 Uptime: ${d}d ${h}h ${m}m`
