@@ -16,5 +16,10 @@
         "required": true
       }
     ]
+  },
+  {
+    "name": "stats",
+    "description": "Show real-time system stats",
+    "type": 1
   }
 ]
