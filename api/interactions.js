@@ -1,23 +1,19 @@
-import express from "express";
 import { verifyKeyMiddleware, InteractionType, InteractionResponseType } from "discord-interactions";
 
-const router = express.Router();
+export default function handler(req, res) {
+  if (req.method !== "POST") {
+    res.status(405).send("Method Not Allowed");
+    return;
+  }
 
-router.use(express.json());
-
-router.post(
-  "/api/discord",
-  verifyKeyMiddleware(process.env.PUBLIC_KEY),
-  (req, res) => {
+  verifyKeyMiddleware(process.env.PUBLIC_KEY)(req, res, () => {
     const interaction = req.body;
 
     if (interaction.type === InteractionType.PING) {
-      return res.send({ type: InteractionResponseType.PONG });
+      res.status(200).json({ type: InteractionResponseType.PONG });
+      return;
     }
 
-    // Keep endpoint minimal to keep the bot online, no other commands
-    return res.send({ type: InteractionResponseType.PONG });
-  }
-);
-
-export default router;
+    res.status(200).end();
+  });
+}
