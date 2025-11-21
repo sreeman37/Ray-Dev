@@ -1,35 +1,26 @@
-import { verifyKey } from "discord-interactions";
+const express = require('express');
+const { verifyKeyMiddleware } = require('discord-interactions');
+const { handleInteraction } = require('./api/interactions');
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.status(405).send("Method Not Allowed");
-    return;
+const app = express();
+
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
   }
+}));
 
-  const signature = req.headers['x-signature-ed25519'];
-  const timestamp = req.headers['x-signature-timestamp'];
-  const body = req.body ? JSON.stringify(req.body) : '';
+const PUBLIC_KEY = process.env.PUBLIC_KEY;
 
-  if (!signature || !timestamp) {
-    res.status(401).send("Missing signature");
-    return;
-  }
+app.post('/interactions', verifyKeyMiddleware(PUBLIC_KEY), handleInteraction);
 
-  const rawBody = req.body && typeof req.body === "object" ? JSON.stringify(req.body) : req.body;
+app.get('/', (req, res) => {
+  res.send('Discord Interactions Bot is running! 🚀');
+});
 
-  const isValid = verifyKey(rawBody, signature, timestamp, process.env.PUBLIC_KEY);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
-  if (!isValid) {
-    res.status(401).send("Bad signature");
-    return;
-  }
-
-  const interaction = typeof req.body === "object" ? req.body : JSON.parse(rawBody);
-
-  if (interaction && interaction.type === 1) {
-    res.status(200).json({ type: 1 });
-    return;
-  }
-
-  res.status(200).end();
-}
+module.exports = app;
