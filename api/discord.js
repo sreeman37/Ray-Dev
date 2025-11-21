@@ -9,7 +9,10 @@ router.post(
   "/api/discord",
   verifyKeyMiddleware(process.env.PUBLIC_KEY),
   (req, res) => {
-    res.sendStatus(200);
+    if (req.body.type === 1) {
+      return res.status(200).json({ type: 1 });
+    }
+    return res.sendStatus(200);
   }
 );
 
