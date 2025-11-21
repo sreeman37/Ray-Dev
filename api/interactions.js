@@ -1,19 +1,28 @@
-import { verifyKeyMiddleware, InteractionType, InteractionResponseType } from "discord-interactions";
+const {
+  InteractionType,
+  InteractionResponseType,
+} = require('discord-interactions');
 
-export default function handler(req, res) {
-  if (req.method !== "POST") {
-    res.status(405).send("Method Not Allowed");
-    return;
+async function handleInteraction(req, res) {
+  const interaction = req.body;
+
+  if (interaction.type === InteractionType.PING) {
+    return res.send({ type: InteractionResponseType.PONG });
   }
 
-  verifyKeyMiddleware(process.env.PUBLIC_KEY)(req, res, () => {
-    const interaction = req.body;
-
-    if (interaction.type === InteractionType.PING) {
-      res.status(200).json({ type: InteractionResponseType.PONG });
-      return;
+  if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+    if (interaction.data.name === 'ping') {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'Pong!',
+          flags: 64,
+        },
+      });
     }
+  }
 
-    res.status(200).end();
-  });
+  return res.status(400).send({ error: 'Unknown interaction' });
 }
+
+module.exports = { handleInteraction };
