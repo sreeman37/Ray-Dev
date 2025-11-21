@@ -10,17 +10,18 @@ const commands = [
     .setDescription('Shows latency'),
 ];
 
-async function registerCommands() {
+(async () => {
   const rest = new REST({ version: '10' }).setToken(token);
   try {
-    await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands.map(c => c.toJSON()) });
+    await rest.put(
+      Routes.applicationGuildCommands(clientId, guildId),
+      { body: commands.map(c => c.toJSON()) }
+    );
     console.log('Slash commands registered.');
   } catch (error) {
     console.error('Failed to register slash commands:', error);
   }
-}
-
-registerCommands();
+})();
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,12 +32,11 @@ export default async function handler(req, res) {
 
   if (interaction.type === InteractionType.ApplicationCommand && interaction.data.name === 'ping') {
     const latency = Date.now() - new Date(interaction.created_at).getTime();
-
     return res.status(200).json({
       type: 4,
       data: {
-        content: `Latency: \`${latency}ms\``,
-      },
+        content: `Latency: \`${latency}ms\``
+      }
     });
   }
 
