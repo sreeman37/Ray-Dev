@@ -1,5 +1,5 @@
 import express from "express";
-import discordRoutes from "./api/discord.js";
+import discordRoutes from "./api/interactions.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
