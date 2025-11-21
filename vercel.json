@@ -1,6 +1,25 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
   "routes": [
-    { "src": "/api/discord", "dest": "/api/discord.js" }
+    {
+      "src": "/api/interactions",
+      "dest": "/index.js",
+      "methods": ["POST"]
+    },
+    {
+      "src": "/interactions",
+      "dest": "/index.js",
+      "methods": ["POST"]
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
   ]
 }
